@@ -1,92 +1,6 @@
 import math
 from enum import Enum
 
-# class EdgeTo:
-#     def __init__(self, points_to, distance):
-#         self.points_to = points_to
-#         self.distance = distance
-#
-#
-# # https://www.educative.io/answers/how-to-implement-a-graph-in-python
-#
-# # Add a vertex to the dictionary
-# def add_vertex(v):
-#     global graph
-#     if v in graph:
-#         print("Vertex ", v, " already exists.")
-#     else:
-#         graph[v] = []
-#
-#
-# # Add an edge between vertex v1 and v2 with edge weight e
-# def add_edge(v1, v2, e):
-#     global graph
-#     # Check if vertex v1 is a valid vertex
-#     if v1 not in graph:
-#         print("Vertex ", v1, " does not exist.")
-#     # Check if vertex v2 is a valid vertex
-#     elif v2 not in graph:
-#         print("Vertex ", v2, " does not exist.")
-#     else:
-#         temp = EdgeTo(v2, e)
-#         graph[v1].append(temp)
-#
-#
-# # Print the graph
-# def print_graph():
-#     global graph
-#
-#     print('')
-#     for vertex in graph:
-#         for edges in graph[vertex]:
-#             print(vertex, "<-> ", edges.points_to, " distance: ", edges.distance)
-#
-# def get_all_neighbors_of(v):
-#   global graph
-#
-#   neighboars = []
-#
-#   neighboars.append(graph[v])
-#
-#   return neighboars
-#
-#
-#
-# # driver code
-# graph = {}
-#
-# add_vertex(start_node_name)
-# add_vertex('A')
-# add_vertex('B')
-# add_vertex('C')
-# add_vertex('D')
-# add_vertex('E')
-# add_vertex('F')
-# add_vertex(end_node_name)
-# # Add the edges between the vertices by specifying
-# # the from and to vertex along with the edge weights.
-# add_edge(start_node_name, 'A', 1)
-# add_edge('A', 'B', 3)
-# add_edge('A', 'C', 3)
-# add_edge('B', 'D', 2)
-# add_edge('B', 'E', 5.5)
-# add_edge('C', 'E', 3)
-# add_edge('C', 'F', 3)
-# add_edge('D', end_node_name, 4)
-# add_edge('E', end_node_name, 3)
-# add_edge('F', end_node_name, 6)
-# print_graph()
-#
-# # 1. Sprawdzenie warunku z odległościami - d_i < r.max
-# for vertex in graph:
-#     for edge in graph[vertex]:
-#         if edge.distance > r_max: graph[vertex].remove(edge)
-#
-# print_graph()
-#
-#
-# print(get_all_neighbors_of('A'))
-
 
 # DANE WEJŚCIOWE - CONSTANT
 p_start_end = 1
@@ -127,19 +41,19 @@ class Vertex:
         self.load_traffic = 0
         self.type = VertexType.TYPICAL
 
-    def make_start(self):
+    def make_start_vertex(self):
         self.type = VertexType.START
 
-    def make_end(self):
+    def make_end_vertex(self):
         self.type = VertexType.END
 
-    def reset_to_normal_type(self):
+    def reset_vertex_type(self):
         self.type = VertexType.TYPICAL
 
     @property
     def reliability(self):
         if self.type == VertexType.TYPICAL:
-            return self.reliability
+            return self._reliability
         else:
             return p_start_end
 
@@ -151,7 +65,7 @@ class Vertex:
     @property
     def load_traffic(self):
         if self.type == VertexType.TYPICAL:
-            return self.load_traffic
+            return self._load_traffic
         else:
             return t_start_end
 
@@ -163,13 +77,16 @@ class Vertex:
     @property
     def current_energy(self):
         if self.type == VertexType.TYPICAL:
-            return self.current_energy
+            return self._current_energy
         else:
             return e_max
 
     @current_energy.setter
     def current_energy(self, current_energy):
         self._current_energy = current_energy
+
+    def __str__(self):
+        return f'{self.name}: {self.type}, {self.reliability}, {self.load_traffic}, {self.current_energy}'
 
 
 class Edge:
@@ -178,16 +95,18 @@ class Edge:
         self.point_two = point_two
         self.distance = distance
 
+    def __str__(self):
+        return f'{self.point_one.name} <-> {self.point_two.name}, distance: {self.distance}'
+
 
 class Graph:
-    def __init__(self):
-        self.vertices: list[Vertex] = []
-        self.edges: list[Edge] = []
+    def __init__(self, vertexes=[], edges=[]):
+        self.vertices: list[Vertex] = vertexes
+        self.edges: list[Edge] = edges
 
-    def add_vertex(self, name: str):
+    def add_vertex(self, name: str) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
-            print(f'{name} already added')
-            return
+            raise ValueError(f'{name} already added')
 
         vertex = Vertex(name)
         self.vertices.append(vertex)
@@ -196,25 +115,29 @@ class Graph:
 
     def add_edge(self, point_one: Vertex, point_two: Vertex, distance: float):
         if not self.vertices.__contains__(point_one):
-            print(f'{point_one} does not exist')
-            return
+            raise ValueError(f'{point_one} does not exist')
 
         if not self.vertices.__contains__(point_two):
-            print(f'{point_two} does not exist')
-            return
+            raise ValueError(f'{point_two} does not exist')
 
         # Zabezpieczenie żeby nie było kilka takich samych?
         self.edges.append(Edge(point_one, point_two, distance))
 
     def print_graph(self):
-        print('')
         for edge_element in self.edges:
-            print(f'{edge_element.point_one.name} <-> {edge_element.point_two.name}, distance: {edge_element.distance}')
+            print(edge_element.__str__())
+        print('\n')
 
-    def get_neighbors_of_vertex(self, vertex: Vertex):
-        if not self.vertices.__contains__(vertex):
-            print(f'Does not contain {vertex.name}')
-            return
+    def get_vertixes_besides(self, besides: Vertex) -> list:
+        copy = list(self.vertices)
+        copy.remove(besides)
+
+        return copy
+
+    def get_neighbors_of_vertex(self, vertex: Vertex) -> list:
+        # We do not chekc it, bcs we delete is before using this method
+        # if not self.vertices.__contains__(vertex):
+        #     raise ValueError(f'Does not contain {vertex.name}')
 
         neighbors = []
         for edge_element in self.edges:
@@ -225,6 +148,67 @@ class Graph:
                 neighbors.append(edge_element.point_one)
 
         return neighbors
+
+    def get_neighbors_of_vertexes(self, vertexes: [Vertex]) -> list:
+        neighbors = []
+        for vertex in vertexes:
+            neighbors.extend(self.get_neighbors_of_vertex(vertex))
+
+        return neighbors
+
+
+def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
+    # Begin
+
+    # 1. Set types for vertexes and copy the graph
+    starting_vertex.make_start_vertex()
+    ending_vertex.make_end_vertex()
+    original_vertexes = list(graph.vertices)
+    original_edges = list(graph.edges)
+
+    # 2. Initialise necessary elements:
+    #       - Create the empty set of labeled values: W
+    #       - Create dict of (): L (Co to wgl jest? Nigdzie tego nie było XD)
+    #       - Create dict of earnings for each vertex: M
+    #       - Create disc for previous vertexes: Previous
+    W = []
+    L = {
+        ending_vertex: 0,
+    }
+    M = {
+        ending_vertex: 1
+    }
+    Previous = {}
+
+    # 3. Initialization Loop
+    for vertex in graph.get_vertixes_besides(ending_vertex):
+        L[vertex] = math.inf
+        Previous[vertex] = None
+        M[vertex] = 1
+
+    # 4. Main Loop
+    # Because we need it to enter at least once, we use a do while
+    while True:
+        vertex_j = None
+        for vertex in graph.vertices:
+            if all(L[vertex] <= L[vertex_k] for vertex_k in graph.get_vertixes_besides(vertex)):
+                vertex_j = vertex
+
+        graph.vertices.remove(vertex_j)
+        W.append(vertex_j)
+
+        for vertex_i in graph.get_neighbors_of_vertex(vertex_j):
+            print(vertex_i)
+        print('')
+
+        # Ending condition
+        if not ((not W.__contains__(starting_vertex)) and len(graph.get_neighbors_of_vertexes(W)) != 0):
+            break
+
+
+    # After - Return the old values
+    graph.edges = original_edges
+    graph.vertices = original_vertexes
 
 
 graph = Graph()
@@ -258,5 +242,7 @@ for edge in graph.edges:
 
 graph.print_graph()
 
-neighbor_test = list(map(lambda vertex: vertex.name, graph.get_neighbors_of_vertex(A)))
-print(neighbor_test)
+# neighbor_test = list(map(lambda vertex: vertex.name, graph.get_neighbors_of_vertex(A)))
+# print(neighbor_test)
+
+run_algorythm(graph, A, G)
