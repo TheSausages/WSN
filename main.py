@@ -1,10 +1,5 @@
 import math
-from collections import namedtuple
-
-# DANE WEJŚCIOWE
-start_node_name = 'start'
-end_node_name = 'end'
-
+from enum import Enum
 
 # class EdgeTo:
 #     def __init__(self, points_to, distance):
@@ -92,8 +87,14 @@ end_node_name = 'end'
 #
 # print(get_all_neighbors_of('A'))
 
-# prawdopodobieństwo, że uda się przesłać
+
+# DANE WEJŚCIOWE - CONSTANT
 p_start_end = 1
+t_start_end = math.inf
+
+# DANE WEJŚCIOWE - ZMIENNE
+
+# prawdopodobieństwo, że uda się przesłać
 p_other = 0.9
 
 # Odległości, poza którą nie ma komunikacji między elementami (m)
@@ -101,19 +102,74 @@ r_max = 5
 
 # Energia
 e_max = 20
-e_start_min = e_max
 e_min = 5
 
 # Obciążenie
 t_i = 5
-t_start_end = math.inf
 
+# 1. Check if reliability is ok
+if p_other < 0 or p_other > 1:
+    raise ValueError(f'Wrong reliability value: {p_other}')
+
+
+class VertexType(Enum):
+    TYPICAL = 'sensor'
+    START = 'start'
+    END = 'end'
 
 
 class Vertex:
     def __init__(self, name: str):
         self.name = name
         self.current_energy = e_max
+        self.min_energy = e_min
+        self.reliability = p_other
+        self.load_traffic = 0
+        self.type = VertexType.TYPICAL
+
+    def make_start(self):
+        self.type = VertexType.START
+
+    def make_end(self):
+        self.type = VertexType.END
+
+    def reset_to_normal_type(self):
+        self.type = VertexType.TYPICAL
+
+    @property
+    def reliability(self):
+        if self.type == VertexType.TYPICAL:
+            return self.reliability
+        else:
+            return p_start_end
+
+    @reliability.setter
+    def reliability(self, reliability):
+        self._reliability = reliability
+
+    # Load Traffic
+    @property
+    def load_traffic(self):
+        if self.type == VertexType.TYPICAL:
+            return self.load_traffic
+        else:
+            return t_start_end
+
+    @load_traffic.setter
+    def load_traffic(self, load_traffic):
+        self._load_traffic = load_traffic
+
+    # Current Energy
+    @property
+    def current_energy(self):
+        if self.type == VertexType.TYPICAL:
+            return self.current_energy
+        else:
+            return e_max
+
+    @current_energy.setter
+    def current_energy(self, current_energy):
+        self._current_energy = current_energy
 
 
 class Edge:
@@ -131,11 +187,12 @@ class Graph:
     def add_vertex(self, name: str):
         if any(vertex.name == name for vertex in self.vertices):
             print(f'{name} already added')
-        else:
-            vertex = Vertex(name)
-            self.vertices.append(vertex)
+            return
 
-            return vertex
+        vertex = Vertex(name)
+        self.vertices.append(vertex)
+
+        return vertex
 
     def add_edge(self, point_one: Vertex, point_two: Vertex, distance: float):
         if not self.vertices.__contains__(point_one):
@@ -172,31 +229,29 @@ class Graph:
 
 graph = Graph()
 
-Start = graph.add_vertex(start_node_name)
 A = graph.add_vertex('A')
 B = graph.add_vertex('B')
 C = graph.add_vertex('C')
 D = graph.add_vertex('D')
 E = graph.add_vertex('E')
 F = graph.add_vertex('F')
-End = graph.add_vertex(end_node_name)
+G = graph.add_vertex('G')
 
-graph.add_edge(Start, A, 1)
 graph.add_edge(A, B, 3)
 graph.add_edge(A, C, 3)
 graph.add_edge(B, D, 2)
 graph.add_edge(B, E, 5.5)
 graph.add_edge(C, E, 3)
 graph.add_edge(C, F, 3)
-graph.add_edge(D, End, 4)
-graph.add_edge(E, End, 3)
-graph.add_edge(F, End, 6)
+graph.add_edge(D, G, 4)
+graph.add_edge(E, G, 3)
+graph.add_edge(F, G, 6)
 
 graph.print_graph()
 
 # OBLICZENIA
 
-# 1. Sprawdzenie warunku z odległościami - d_i < r.max
+# 2. Sprawdzenie warunku z odległościami - d_i < r.max
 for edge in graph.edges:
     if edge.distance > r_max:
         graph.edges.remove(edge)
