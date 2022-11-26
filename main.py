@@ -207,6 +207,8 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
 
 
     # After - Return the old values
+    starting_vertex.reset_vertex_type()
+    ending_vertex.reset_vertex_type()
     graph.edges = original_edges
     graph.vertices = original_vertexes
 
