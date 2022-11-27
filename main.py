@@ -157,9 +157,9 @@ class Graph:
     def get_neighbors_of_vertex(self, vertex: Vertex) -> list:
         neighbors = []
         for edge_element in self.edges:
-            # If it needs to be uni-directional, have both unselected
-            # if edge_element.point_one == vertex:
-            #     neighbors.append(edge_element.point_two)
+            # If it needs to be one-directional, have one selected
+            if edge_element.point_one == vertex:
+                neighbors.append(edge_element.point_two)
 
             if edge_element.point_two == vertex:
                 neighbors.append(edge_element.point_one)
@@ -357,8 +357,8 @@ print('Created Graph')
 graph.print_graph()
 
 for package in range(0, 10):
-    starting_vertex = A
-    ending_vertex = G
+    starting_vertex = G
+    ending_vertex = A
 
     out = run_algorythm(graph, starting_vertex, ending_vertex)
 
