@@ -157,10 +157,9 @@ class Graph:
     def get_neighbors_of_vertex(self, vertex: Vertex) -> list:
         neighbors = []
         for edge_element in self.edges:
-            # If it needs to be one-directional, delete a
-            # selected one of the following 2 (depending on direction)
-            if edge_element.point_one == vertex:
-                neighbors.append(edge_element.point_two)
+            # If it needs to be uni-directional, have both unselected
+            # if edge_element.point_one == vertex:
+            #     neighbors.append(edge_element.point_two)
 
             if edge_element.point_two == vertex:
                 neighbors.append(edge_element.point_one)
@@ -205,8 +204,8 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
 
 
 # graph - the network graph we use
-# vertex_i - Starting point
-# vertex_j - next hop from vertex_i
+# vertex_i - the one receiving
+# vertex_j - the one who would send
 # previous - dict with previous vertexes for a given vertexes
 def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
     # print(f'{vertex_i.name} -> {vertex_j.name}')
