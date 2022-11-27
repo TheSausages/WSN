@@ -357,8 +357,8 @@ print('Created Graph')
 graph.print_graph()
 
 for package in range(0, 10):
-    starting_vertex = G
-    ending_vertex = A
+    starting_vertex = A
+    ending_vertex = G
 
     out = run_algorythm(graph, starting_vertex, ending_vertex)
 
