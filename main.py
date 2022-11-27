@@ -17,12 +17,12 @@ r_max = 5
 e_max = 20
 e_min = 5
 
-# Obciążenie
-t_i = 5
-
 # Mathematical coeficients
-beta_coef = 0.45
-gamma_coef = 1.0
+beta_coef = 0.05
+gamma_coef = 0.2
+
+# Zmienne
+energy_per_package = 2
 
 # Game theory:
 # Payment for intermediate node for successfull packet transmission
@@ -73,10 +73,10 @@ class Vertex:
     # Load Traffic
     @property
     def load_traffic(self):
-        if self.type == VertexType.TYPICAL:
-            return self._load_traffic
-        else:
+        if self.type == VertexType.END:
             return t_start_end
+        else:
+            return self._load_traffic
 
     @load_traffic.setter
     def load_traffic(self, load_traffic):
@@ -141,6 +141,9 @@ class Graph:
         self.edges.append(Edge(point_one, point_two, distance))
 
     def print_graph(self):
+        for vertex in self.vertices:
+            print(vertex.__str__())
+
         for edge_element in self.edges:
             print(edge_element.__str__())
         print('\n')
@@ -152,10 +155,6 @@ class Graph:
         return copy
 
     def get_neighbors_of_vertex(self, vertex: Vertex) -> list:
-        # We do not chekc it, bcs we delete is before using this method
-        # if not self.vertices.__contains__(vertex):
-        #     raise ValueError(f'Does not contain {vertex.name}')
-
         neighbors = []
         for edge_element in self.edges:
             if edge_element.point_one == vertex:
@@ -203,7 +202,12 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
     return nr_of_previous
 
 
+# graph - the network graph we use
+# vertex_i - Starting point
+# vertex_j - next hop from vertex_i
+# previous - dict with previous vertexes for other vertextes
 def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
+    print(f'{vertex_i.name} -> {vertex_j.name}')
     # Cost function for intermediate node
 
     # Cost depending on distance
@@ -220,10 +224,13 @@ def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, pr
         cost_energy = math.inf
 
     # Cost depending on load traffic
-    traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 0
+    if vertex_j.type == VertexType.START:
+        traffic_density_j = 1.0
+    else:
+        traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 0
     cost_load = 1.0 + gamma_coef * traffic_density_j
 
-    if vertex_i.type == VertexType.START:
+    if vertex_j.type == VertexType.START:
         h = get_number_of_vertexes_in_path(previous, vertex_j)
         mult = beta_coef / (m - h * q)
     else:
@@ -279,11 +286,10 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
         for vertex_i in graph.get_neighbors_of_vertex(vertex_j):
             # Calculate the costs
             # x = L(v_j) + C_ij
-            c_ij = calculate_cost_function(graph, vertex_i, vertex_j, Previous)
+            c_ij = calculate_cost_function(graph, vertex_j, vertex_i, Previous)
             x = L[vertex_j] + c_ij
 
             # Check if the current costs are higher than existing costs
-            # if (L(v_i) > x)
             if L[vertex_i] > x:
                 # L(vi) = x
                 L[vertex_i] = x
@@ -302,26 +308,31 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
         if not ((not W.__contains__(starting_vertex)) and len(graph.get_neighbors_of_vertexes(W)) != 0):
             break
 
+    # End
+
     # Get the optimal path from the Previous dict
-    path = [starting_vertex]
-    next_hop = Previous[starting_vertex]
-    path.append(next_hop)
-    while True:
-        next_hop = Previous[next_hop]
+    path = []
+    try:
+        path = [starting_vertex]
+        next_hop = Previous[starting_vertex]
         path.append(next_hop)
+        while True:
+            next_hop = Previous[next_hop]
+            path.append(next_hop)
 
-        if next_hop not in Previous.keys():
-            break
-
+            if next_hop not in Previous.keys():
+                break
+    except:
+        print(f'Could not find any path to send data')
 
     # After - Return to the original values
-    starting_vertex.reset_vertex_type()
-    ending_vertex.reset_vertex_type()
     graph.edges = original_edges
     graph.vertices = original_vertexes
 
     return path
 
+
+# PRZYKŁADOWE OBLICZENIA
 
 graph = Graph()
 
@@ -345,13 +356,29 @@ graph.add_edge(F, G, 6)
 
 graph.print_graph()
 
-# OBLICZENIA
+for package in range(0, 10):
+    starting_vertex = A
+    ending_vertex = G
 
-out = run_algorythm(graph, A, G)
+    out = run_algorythm(graph, starting_vertex, ending_vertex)
 
-last_element = out[-1]
-for path_element in out:
-    if path_element == last_element:
-        print(f'{path_element.name}')
-    else:
-        print(f'{path_element.name} -> ', end='')
+    print(f'Round {package + 1} finished with path:')
+
+    last_element = out[-1]
+    for path_element in out:
+        if path_element == last_element:
+            print(f'{path_element.name}')
+        else:
+            print(f'{path_element.name} -> ', end='')
+
+    graph.total_load_traffic += 1
+    for vertex in out:
+        if vertex.type == VertexType.TYPICAL or vertex.type == VertexType.START:
+            # For Start Type it will always return max energy anyway
+            vertex.current_energy = vertex.current_energy - energy_per_package
+            vertex.load_traffic += 1
+
+    starting_vertex.reset_vertex_type()
+    ending_vertex.reset_vertex_type()
+
+    print('')
