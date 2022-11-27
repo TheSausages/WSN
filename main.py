@@ -1,33 +1,33 @@
 import math
 from enum import Enum
 
-# DANE WEJŚCIOWE - CONSTANT
+# INPUT DATA - CONSTANT
 p_start_end = 1
-t_start_end = math.inf
+t_start_end = 1
 
-# DANE WEJŚCIOWE - ZMIENNE
+# INPUT DATA  - VARIABLES
 
-# prawdopodobieństwo, że uda się przesłać
+# Probability for successfully sending
 p_other = 0.9
 
-# Odległości, poza którą nie ma komunikacji między elementami (m)
+# Distance, above which communication is impossible
 r_max = 5
 
-# Energia
+# Max and Min energies
 e_max = 20
 e_min = 5
+
+# Energy lost per Package
+energy_per_package = 2
 
 # Mathematical coeficients
 beta_coef = 0.05
 gamma_coef = 0.2
 
-# Zmienne
-energy_per_package = 2
-
 # Game theory:
-# Payment for intermediate node for successfull packet transmission
+# Payment for intermediate node for successful packet transmission
 q = 5.0
-# Payment for source node for successfull packet transmission
+# Payment for source node for successful packet transmission
 m = 30.0
 
 # 1. Check if reliability is ok
@@ -73,10 +73,10 @@ class Vertex:
     # Load Traffic
     @property
     def load_traffic(self):
-        if self.type == VertexType.END:
-            return t_start_end
-        else:
+        if self.type == VertexType.TYPICAL:
             return self._load_traffic
+        else:
+            return t_start_end
 
     @load_traffic.setter
     def load_traffic(self, load_traffic):
@@ -204,8 +204,8 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
 
 
 # graph - the network graph we use
-# vertex_i - the one receiving
-# vertex_j - the one who sends
+# vertex_i - the one who sends
+# vertex_j - the one who receives
 # previous - dict with previous vertexes for a given vertexes
 def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
     # print(f'{vertex_i.name} -> {vertex_j.name}')
@@ -226,17 +226,19 @@ def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, pr
         cost_energy = math.inf
 
     # Cost depending on load traffic
-    if vertex_j.type == VertexType.START:
-        traffic_density_j = 1.0
-    else:
-        traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 0
+    traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 1
     cost_load = 1.0 + gamma_coef * traffic_density_j
 
-    if vertex_j.type == VertexType.START:
+    if vertex_i.type == VertexType.START:
         h = get_number_of_vertexes_in_path(previous, vertex_j)
         mult = beta_coef / (m - h * q)
     else:
         mult = beta_coef / q
+
+    # print(f'{cost_distance}')
+    # print(f'{cost_energy}')
+    # print(f'{cost_load}')
+    # print('')
 
     total_cost_ij = mult * cost_distance * cost_energy * cost_load
     return total_cost_ij
@@ -288,7 +290,7 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
         for vertex_i in graph.get_neighbors_of_vertex(vertex_j):
             # Calculate the costs
             # x = L(v_j) + C_ij
-            c_ij = calculate_cost_function(graph, vertex_j, vertex_i, Previous)
+            c_ij = calculate_cost_function(graph, vertex_i, vertex_j, Previous)
             x = L[vertex_j] + c_ij
 
             # Check if the current costs are higher than existing costs
