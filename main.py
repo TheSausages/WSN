@@ -205,7 +205,7 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
 
 # graph - the network graph we use
 # vertex_i - the one receiving
-# vertex_j - the one who would send
+# vertex_j - the one who sends
 # previous - dict with previous vertexes for a given vertexes
 def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
     # print(f'{vertex_i.name} -> {vertex_j.name}')
