@@ -193,10 +193,12 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
 
     while True:
         prev = previous[prev]
-        nr_of_previous += 1
 
+        # We only increase when the previous is not the end vertex
         if prev not in previous:
             break
+
+        nr_of_previous += 1
 
     return nr_of_previous
 
@@ -221,7 +223,6 @@ def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, pr
     traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 0
     cost_load = 1.0 + gamma_coef * traffic_density_j
 
-    mult = 0.0
     if vertex_i.type == VertexType.START:
         h = get_number_of_vertexes_in_path(previous, vertex_j)
         mult = beta_coef / (m - h * q)
@@ -243,7 +244,7 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
 
     # 2. Initialise necessary elements:
     #       - Create the empty set of labeled nodes: W
-    #       - Create dict of (): L (Co to wgl jest? Nigdzie tego nie było XD)
+    #       - Create dict of costs: L
     #       - Create dict of earnings for each vertex: M
     #       - Create disc for previous vertexes: Previous
     W = []
@@ -264,18 +265,24 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
     # 4. Main Loop
     # Because we need it to enter at least once, we use a do while
     while True:
+        # Select next vertex to analyse
         vertex_j = None
         for vertex in graph.vertices:
             if all(L[vertex] <= L[vertex_k] for vertex_k in graph.get_vertixes_besides(vertex)):
                 vertex_j = vertex
 
+        # Remove it from the graph and add it to the set of empty nodes
         graph.vertices.remove(vertex_j)
         W.append(vertex_j)
 
+        # Go thought it's neighbors
         for vertex_i in graph.get_neighbors_of_vertex(vertex_j):
+            # Calculate the costs
             # x = L(v_j) + C_ij
             c_ij = calculate_cost_function(graph, vertex_i, vertex_j, Previous)
             x = L[vertex_j] + c_ij
+
+            # Check if the current costs are higher than existing costs
             # if (L(v_i) > x)
             if L[vertex_i] > x:
                 # L(vi) = x
@@ -307,7 +314,7 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
             break
 
 
-    # After - Return the old values
+    # After - Return to the original values
     starting_vertex.reset_vertex_type()
     ending_vertex.reset_vertex_type()
     graph.edges = original_edges
