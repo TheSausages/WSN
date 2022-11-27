@@ -210,8 +210,6 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
 def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
     # print(f'{vertex_i.name} -> {vertex_j.name}')
 
-    # Cost function for intermediate node
-
     # Cost depending on distance
     distance_ij = graph.get_distance(vertex_i, vertex_j)
     if distance_ij < r_max:
