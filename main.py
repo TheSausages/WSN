@@ -29,8 +29,6 @@ gamma_coef = 1.0
 q = 5.0
 # Payment for source node for successfull packet transmission
 m = 30.0
-# Total traffic
-t_total = 100
 
 # 1. Check if reliability is ok
 if p_other < 0 or p_other > 1:
