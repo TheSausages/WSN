@@ -1,7 +1,6 @@
 import math
 from enum import Enum
 
-
 # DANE WEJŚCIOWE - CONSTANT
 p_start_end = 1
 t_start_end = math.inf
@@ -9,7 +8,7 @@ t_start_end = math.inf
 # DANE WEJŚCIOWE - ZMIENNE
 
 # prawdopodobieństwo, że uda się przesłać
-p_other = 0.9 #TODO ta wartość powinna być inna dla każdego sensora
+p_other = 0.9
 
 # Odległości, poza którą nie ma komunikacji między elementami (m)
 r_max = 5
@@ -22,14 +21,12 @@ e_min = 5
 t_i = 5
 
 # Mathematical coeficients
-beta_coef = 1.0
+beta_coef = 0.45
 gamma_coef = 1.0
 
-
-# TODO nie wiem na jakiej podstawie mamy ustalić te dane, możę tweakując je dopracowujemy nasz algorytm :hmm:
 # Game theory:
 # Payment for intermediate node for successfull packet transmission
-q = 1.0
+q = 5.0
 # Payment for source node for successfull packet transmission
 m = 30.0
 # Total traffic
@@ -102,6 +99,14 @@ class Vertex:
     def __str__(self):
         return f'{self.name}: {self.type}, {self.reliability}, {self.load_traffic}, {self.current_energy}'
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return (
+                hasattr(other, 'name') and other.name == self.name
+        )
+
 
 class Edge:
     def __init__(self, point_one: Vertex, point_two: Vertex, distance: float):
@@ -117,6 +122,7 @@ class Graph:
     def __init__(self, vertexes=[], edges=[]):
         self.vertices: list[Vertex] = vertexes
         self.edges: list[Edge] = edges
+        self.total_load_traffic = 0
 
     def add_vertex(self, name: str) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
@@ -134,7 +140,6 @@ class Graph:
         if not self.vertices.__contains__(point_two):
             raise ValueError(f'{point_two} does not exist')
 
-        # Zabezpieczenie żeby nie było kilka takich samych?
         self.edges.append(Edge(point_one, point_two, distance))
 
     def print_graph(self):
@@ -165,8 +170,8 @@ class Graph:
 
     def get_distance(self, vertex_i: Vertex, vertex_j: Vertex) -> float:
         for edge in self.edges:
-            if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or 
-            (edge.point_two == vertex_i and edge.point_one == vertex_j)):
+            if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or
+                    (edge.point_two == vertex_i and edge.point_one == vertex_j)):
                 return edge.distance
         return math.inf
 
@@ -179,50 +184,54 @@ class Graph:
 
     def delete_edge(self, vertex_i: Vertex, vertex_j: Vertex):
         for edge in self.edges:
-            if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or 
-            (edge.point_two == vertex_i and edge.point_one == vertex_j)):
+            if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or
+                    (edge.point_two == vertex_i and edge.point_one == vertex_j)):
                 self.edges.remove(edge)
 
-def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex):
+
+def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
+    nr_of_previous = 0
+    prev = previous_candidate
+
+    while True:
+        prev = previous[prev]
+        nr_of_previous += 1
+
+        if prev not in previous:
+            break
+
+    return nr_of_previous
+
+
+def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, previous: dict):
     # Cost function for intermediate node
-        
+
     # Cost depending on distance
-    cost_distance = 0.0
-    # get distance between vertex
     distance_ij = graph.get_distance(vertex_i, vertex_j)
     if distance_ij < r_max:
         cost_distance = distance_ij * distance_ij
     else:
         cost_distance = math.inf
-        
+
     # Cost depending on the remained energy
-    cost_energy = 0.0
     if vertex_j.current_energy >= e_min:
-        const_energy = e_max / vertex_j.current_energy
+        cost_energy = e_max / vertex_j.current_energy
     else:
         cost_energy = math.inf
-        
-    # Cost depending on load traffic
-    cost_load = 0.0
 
-    # TODO Trzeba jakoś określić skąd wynika T i T_i
-    # musialbym sie zastanowic, nie wiem na razie jak to ustalic
-    traffic_total = t_total
-    traffic_j = 1 # TODO na razie przypisuje tu cokolwiek xdd
-    traffic_density_j = traffic_j / traffic_total
-    cost_load = 1.0 + gamma_coef*traffic_density_j
+    # Cost depending on load traffic
+    traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 0
+    cost_load = 1.0 + gamma_coef * traffic_density_j
 
     mult = 0.0
     if vertex_i.type == VertexType.START:
-        h = 1 #TODO trzeba ustalić skąd wziąć to h, to jest ilość wierzchołków na trasie
-        mult = beta_coef / (m - h*q)
+        h = get_number_of_vertexes_in_path(previous, vertex_j)
+        mult = beta_coef / (m - h * q)
     else:
         mult = beta_coef / q
-    
-    total_cost_ij = mult*cost_distance*cost_energy*cost_load
+
+    total_cost_ij = mult * cost_distance * cost_energy * cost_load
     return total_cost_ij
-
-
 
 
 def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
@@ -267,27 +276,36 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
 
         for vertex_i in graph.get_neighbors_of_vertex(vertex_j):
             # x = L(v_j) + C_ij
-            c_ij = calculate_cost_function(graph, vertex_i, vertex_j)
+            c_ij = calculate_cost_function(graph, vertex_i, vertex_j, Previous)
             x = L[vertex_j] + c_ij
             # if (L(v_i) > x)
             if L[vertex_i] > x:
                 # L(vi) = x
                 L[vertex_i] = x
-                #M(vi) = p_i * M(vj) 
-                # TODO nie wiem dokładnie skąd wziąć p_i, to jest prawdopodobieństwo dojścia pakietu do vi
-                # albo prawdopodobieństwo przesłania pakietu czyli prawdopodobienstwo całej trasy
-                p_i = 0.9 #TODO na razie to tak zaznacze
 
-                M[vertex_i] = p_i * M[vertex_j]
+                # M(vi) = p_i * M(vj)
+                M[vertex_i] = p_other * M[vertex_j]
+
                 if (M[vertex_i] - c_ij) < 0:
-                    #delete edge (vi, vj) from E
+                    # delete edge (vi, vj) from E
                     graph.delete_edge(vertex_i, vertex_j)
                 else:
-                    #previous(vi) = vj
+                    # previous(vi) = vj
                     Previous[vertex_i] = vertex_j
 
         # Ending condition
         if not ((not W.__contains__(starting_vertex)) and len(graph.get_neighbors_of_vertexes(W)) != 0):
+            break
+
+    # Get the optimal path from the Previous dict
+    path = [starting_vertex]
+    next_hop = Previous[starting_vertex]
+    path.append(next_hop)
+    while True:
+        next_hop = Previous[next_hop]
+        path.append(next_hop)
+
+        if next_hop not in Previous.keys():
             break
 
 
@@ -296,6 +314,8 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
     ending_vertex.reset_vertex_type()
     graph.edges = original_edges
     graph.vertices = original_vertexes
+
+    return path
 
 
 graph = Graph()
@@ -322,14 +342,11 @@ graph.print_graph()
 
 # OBLICZENIA
 
-# 2. Sprawdzenie warunku z odległościami - d_i < r.max
-for edge in graph.edges:
-    if edge.distance > r_max:
-        graph.edges.remove(edge)
+out = run_algorythm(graph, A, G)
 
-# graph.print_graph()
-
-# neighbor_test = list(map(lambda vertex: vertex.name, graph.get_neighbors_of_vertex(A)))
-# print(neighbor_test)
-
-run_algorythm(graph, A, G)
+last_element = out[-1]
+for path_element in out:
+    if path_element == last_element:
+        print(f'{path_element.name}')
+    else:
+        print(f'{path_element.name} -> ', end='')
