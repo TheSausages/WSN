@@ -235,11 +235,6 @@ def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, pr
     else:
         mult = beta_coef / q
 
-    # print(f'{cost_distance}')
-    # print(f'{cost_energy}')
-    # print(f'{cost_load}')
-    # print('')
-
     total_cost_ij = mult * cost_distance * cost_energy * cost_load
     return total_cost_ij
 
