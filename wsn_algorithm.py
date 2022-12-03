@@ -1,35 +1,5 @@
 import math
-
-# INPUT DATA  - VARIABLES
-
-# Probability for successfully sending
-from graph import Vertex, Graph, VertexType
-
-p_other = 0.9
-
-# Distance, above which communication is impossible
-r_max = 5
-
-# Max and Min energies
-e_max = 20
-e_min = 5
-
-# Energy lost per Package
-energy_per_package = 2
-
-# Mathematical coeficients
-beta_coef = 0.05
-gamma_coef = 0.2
-
-# Game theory:
-# Payment for intermediate node for successful packet transmission
-q = 5.0
-# Payment for source node for successful packet transmission
-m = 30.0
-
-# 1. Check if reliability is ok
-if p_other < 0 or p_other > 1:
-    raise ValueError(f'Wrong reliability value: {p_other}')
+from graph import Graph, Vertex, VertexType
 
 
 def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
@@ -57,26 +27,26 @@ def calculate_cost_function(graph: Graph, vertex_i: Vertex, vertex_j: Vertex, pr
 
     # Cost depending on distance
     distance_ij = graph.get_distance(vertex_i, vertex_j)
-    if distance_ij < r_max:
+    if distance_ij < graph.network_info.r_max:
         cost_distance = distance_ij * distance_ij
     else:
         cost_distance = math.inf
 
     # Cost depending on the remained energy
-    if vertex_j.current_energy >= e_min:
-        cost_energy = e_max / vertex_j.current_energy
+    if vertex_j.current_energy >= graph.network_info.e_min:
+        cost_energy = graph.network_info.e_max / vertex_j.current_energy
     else:
         cost_energy = math.inf
 
     # Cost depending on load traffic
     traffic_density_j = vertex_j.load_traffic / graph.total_load_traffic if graph.total_load_traffic >= 1 else 1
-    cost_load = 1.0 + gamma_coef * traffic_density_j
+    cost_load = 1.0 + graph.network_info.gamma_coef * traffic_density_j
 
     if vertex_i.type == VertexType.START:
         h = get_number_of_vertexes_in_path(previous, vertex_j)
-        mult = beta_coef / (m - h * q)
+        mult = graph.network_info.beta_coef / (graph.network_info.m - h * graph.network_info.q)
     else:
-        mult = beta_coef / q
+        mult = graph.network_info.beta_coef / graph.network_info.q
 
     total_cost_ij = mult * cost_distance * cost_energy * cost_load
     return total_cost_ij
@@ -137,7 +107,7 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
                 L[vertex_i] = x
 
                 # M(vi) = p_i * M(vj)
-                M[vertex_i] = p_other * M[vertex_j]
+                M[vertex_i] = graph.network_info.p_other * M[vertex_j]
 
                 if (M[vertex_i] - c_ij) < 0:
                     # delete edge (vi, vj) from E
@@ -173,55 +143,3 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
 
     return path
 
-
-# PRZYKŁADOWE OBLICZENIA
-
-graph = Graph()
-
-A = graph.add_vertex('A', e_max, e_min, p_other)
-B = graph.add_vertex('B', e_max, e_min, p_other)
-C = graph.add_vertex('C', e_max, e_min, p_other)
-D = graph.add_vertex('D', e_max, e_min, p_other)
-E = graph.add_vertex('E', e_max, e_min, p_other)
-F = graph.add_vertex('F', e_max, e_min, p_other)
-G = graph.add_vertex('G', e_max, e_min, p_other)
-
-graph.add_edge(A, B, 3)
-graph.add_edge(A, C, 3)
-graph.add_edge(B, D, 2)
-graph.add_edge(B, E, 5.5)
-graph.add_edge(C, E, 3)
-graph.add_edge(C, F, 3)
-graph.add_edge(D, G, 4)
-graph.add_edge(E, G, 3)
-graph.add_edge(F, G, 6)
-
-print('Created Graph')
-graph.print_graph()
-
-for package in range(0, 10):
-    starting_vertex = A
-    ending_vertex = G
-
-    out = run_algorythm(graph, starting_vertex, ending_vertex)
-
-    print(f'Round {package + 1} finished with path:')
-
-    last_element = out[-1]
-    for path_element in out:
-        if path_element == last_element:
-            print(f'{path_element.name}')
-        else:
-            print(f'{path_element.name} -> ', end='')
-
-    graph.total_load_traffic += 1
-    for vertex in out:
-        if vertex.type == VertexType.TYPICAL or vertex.type == VertexType.START:
-            # For Start Type it will always return max energy anyway
-            vertex.current_energy = vertex.current_energy - energy_per_package
-            vertex.load_traffic += 1
-
-    starting_vertex.reset_vertex_type()
-    ending_vertex.reset_vertex_type()
-
-    print('')

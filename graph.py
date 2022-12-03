@@ -5,6 +5,21 @@ import math
 p_start_end = 1
 t_start_end = 1
 
+
+class NetworkInformation:
+    def __init__(self, p_other: float, r_max: float, e_max: float, e_min: float, energy_per_package: float, beta_coef: float,
+                 gamma_coef: float, q: float, m: float):
+        self.p_other = p_other
+        self.r_max = r_max
+        self.e_max = e_max
+        self.e_min = e_min
+        self.energy_per_package = energy_per_package
+        self.beta_coef = beta_coef
+        self.gamma_coef = gamma_coef
+        self.q = q
+        self.m = m
+
+
 class VertexType(Enum):
     TYPICAL = 'sensor'
     START = 'start'
@@ -12,7 +27,7 @@ class VertexType(Enum):
 
 
 class Vertex:
-    def __init__(self, name: str, max_energy: int, min_energy: int, reliability: float):
+    def __init__(self, name: str, max_energy: float, min_energy: float, reliability: float):
         self.name = name
         self.current_energy = max_energy
         self.min_energy = min_energy
@@ -88,16 +103,17 @@ class Edge:
 
 
 class Graph:
-    def __init__(self, vertexes=[], edges=[]):
+    def __init__(self, network_info: NetworkInformation, vertexes=[], edges=[]):
         self.vertices: list[Vertex] = vertexes
         self.edges: list[Edge] = edges
         self.total_load_traffic = 0
+        self.network_info = network_info
 
-    def add_vertex(self, name: str, max_energy: int, min_energy: int, reliability: float) -> Vertex:
+    def add_vertex(self, name: str, reliability: float) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
             raise ValueError(f'{name} already added')
 
-        vertex = Vertex(name, max_energy, min_energy, reliability)
+        vertex = Vertex(name, self.network_info.e_max, self.network_info.e_min, reliability)
         self.vertices.append(vertex)
 
         return vertex
