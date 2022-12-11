@@ -108,12 +108,15 @@ class Graph:
         self.edges: list[Edge] = edges
         self.total_load_traffic = 0
         self.network_info = network_info
+        self.original_edges = edges
 
     def reset(self):
         for vertex in self.vertices:
             vertex.current_energy = self.network_info.e_max
             vertex.load_traffic = 0
             vertex.type = VertexType.TYPICAL
+
+        self.edges = self.original_edges
 
     def add_vertex(self, name: str, reliability: float) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
@@ -132,6 +135,7 @@ class Graph:
             raise ValueError(f'{point_two} does not exist')
 
         self.edges.append(Edge(point_one, point_two, distance))
+        self.original_edges.append(Edge(point_one, point_two, distance))
 
     def print_graph(self):
         for vertex in self.vertices:
