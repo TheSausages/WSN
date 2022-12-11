@@ -110,6 +110,7 @@ class Graph:
         self.network_info = network_info
         self.original_edges = edges
 
+    # Rewrite this method so it works correctly (do something with original_edges too)
     def reset(self):
         for vertex in self.vertices:
             vertex.current_energy = self.network_info.e_max
