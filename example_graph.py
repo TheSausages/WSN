@@ -57,8 +57,6 @@ graph.add_edge(F, G, 6)
 print('Created Graph')
 graph.print_graph()
 
-graph.reset()
-
 # Run wsn_algorythm
 print('WSN Algorythm')
 for package in range(0, 10):

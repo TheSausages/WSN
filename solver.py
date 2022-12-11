@@ -2,14 +2,16 @@ from gekko import GEKKO
 from graph import Vertex, Graph, VertexType
 
 def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
-    # TURBO WAŻNE INFO: WIERZCHOŁEK STARTOWY TO 0 a wierzchołek KOŃCOWY TO N-1!!!!!!1
-    # dane z grafu:
+    starting_vertex.make_start_vertex()
+    ending_vertex.make_end_vertex()
+
+    # Data from graph
     epsilon = 0.000000000001
 
     vertices = graph.vertices
     edges = graph.edges
 
-    # Liczba wierzchołków
+    # Nr. of vertices
     n = len(graph.vertices)
 
     D = [[-1 for i in range(n)] for j in range(n)]
@@ -34,7 +36,7 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
 
     max_load_traffic = graph.total_load_traffic
 
-    # Wypłata
+    # Energy
     e_max = vertices[0].max_energy
     e_current = [vertices[i].current_energy for i in range(n)]
 
@@ -48,8 +50,9 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
     # Payment for source node for successful packet transmission
     m_param = graph.network_info.m
 
-    vertex_start = 0
-    vertex_end = n - 1
+    # Starting and ending vertex indexes
+    vertex_start = graph.vertices.index(starting_vertex)
+    vertex_end = graph.vertices.index(ending_vertex)
 
     for vertex in graph.vertices:
         if vertex.type == VertexType.START:
@@ -65,8 +68,7 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
     if max_load_traffic == 0:
         max_load_traffic = 1
 
-    # reliability = vertices[1].reliability
-    reliability = 0.9
+    reliability = graph.network_info.p_other
     reliability_table = [1 for i in range(n)]
 
     for i in range(n):
@@ -75,7 +77,6 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
         else:
             reliability_table[i] = reliability_table[i - 1] * reliability
 
-    # Znajdowanie ścieżki w grafie
     m = GEKKO()
 
     A = [[m.Var(lb=0, ub=1, integer=True) for i in range(n)] for j in range(n)]
@@ -94,22 +95,17 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
 
     U_total = m.Var(integer=False)
 
-    # initial values?
-
     # Equations
 
-    # 1. Warunki utworzenia prawidłowej ścieżki
+    # 1. Conditions for creating correct path
 
-    # 1.1 Kazdy z wierzcholków użyty jest tylko raz
-
-    # sprowadza się do zagwarantowania że z każdego wychodzi maks 1 krawędź
+    # 1.1 Each vertex can be used only one time
     for i in range(n):
         m.Equation(sum(A[i][j] for j in range(n)) <= 1)
 
-    # 1.2 Do każdego wierzchołka wchodzi i wychodzi tylko jedna krawędź. Suma wchodzącyh == sumie wychodząyxh
+    # 1.2 For each vertex, there can only be one input (receiving) and one output (sending to)
 
-    # 1.2.1 Dla dowolnego wierzchołka
-
+    # 1.2.1 For each vertex
     for x in range(n):
         if x == vertex_start:
             m.Equation(sum(A[vertex_start][j] for j in range(n)) == 1)
@@ -120,21 +116,20 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
         else:
             m.Equation(sum(A[x][j] for j in range(n)) - sum(A[i][x] for i in range(n)) == 0)
 
-    # 1.3 Tylko w obrębie dostępnych wag
+    # 1.2.2 Only for given, correct edges
     m.Equation(sum(A[i][j] * gne[i][j] for i in range(n) for j in range(n)) == 0)
 
     ###
-    # Dla wszystkich sciezek w grafie
+    # For all Paths in the graph
     ###
 
     for z in range(n):
         for i in range(n):
             m.Equation(sum(path[z][i][j] for j in range(n)) <= 1)
 
-    # 1.2 Do każdego wierzchołka wchodzi i wychodzi tylko jedna krawędź. Suma wchodzącyh == sumie wychodząyxh
+    # 1.2 For each vertex, there can only be one input (receiving) and one output (sending to)
 
-    # 1.2.1 Dla dowolnego wierzchołka
-
+    # 1.2.1 For each vertex
     for z in range(n):
         if z == vertex_start:
             continue
@@ -149,42 +144,39 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
             else:
                 m.Equation(sum(path[z][x][j] for j in range(n)) - sum(path[z][i][x] for i in range(n)) == 0)
 
-    # 1.3 Tylko w obrębie dostępnych wag
+    # 1.2.2 Only for given, correct edges
     for z in range(n):
         m.Equation(sum(path[z][i][j] * gne[i][j] for i in range(n) for j in range(n)) == 0)
 
-    # Sprawdź które istnieją:
+    # Check which edges exist
     for i in range(n):
         if i == vertex_end:
             m.Equation(EXIST_IN_A[i] == 1)
         else:
             m.Equation(sum(A[i][j] for j in range(n)) - EXIST_IN_A[i] == 0)
 
+    # Check which edges exist
     for z in range(n):
         for i in range(n):
             m.Equation(sum(path[z][i][j] for j in range(n)) - EXIST_IN_PATH[z][i] == 0)
 
-    # Porównanie zbieżności ścieżki z oryginałem:
+    # Check if original is the same
     for z in range(n):
         for i in range(n):
             for j in range(n):
-                m.Equation((A[i][j] - path[z][i][j]) * EXIST_IN_A[
-                    z] > -0.5)  # tutaj musi być > -1 a nie >= 0 bo inaczej się buguje. Pewnie jakieś floating point rounding numery
+                m.Equation((A[i][j] - path[z][i][j]) * EXIST_IN_A[z] > -0.5)
 
     ###
-    # Kod powyżej powinien zapewnić że algorytm potrafi budować poprawne ścieżki
-    # Oraz że path czyli ścieżka do każdego wierzchołka pokrywa się ze ścieżką w grafie
+    # The above code guarantees correct paths
+    # and that the path correspond to the path in the graph
 
-    # Oblicz długość dojścia do każdego wierzchołka:
+    # Calculate nr. of hops to each vertex in the table
     for z in range(n):
         m.Equation(sum(path[z][i][j] for i in range(n) for j in range(n)) - NUM_OF_HOPS[z] == 0)
 
-    # Oblicz
+    # 2. Utility function conditions
 
-    # 2. Warunki funkcji celu
-
-    # Obliczanie kosztu Cij
-    # Ten wzór trzeba dopracować!
+    # Calculate Cij (cost for transporting to each)
     for i in range(n):
         for j in range(n):
             if i == vertex_end:
@@ -198,12 +190,13 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
                             1 + gamma_coef * (load_traffic[j] / max_load_traffic))) * EXIST_IN_A[i] * EXIST_IN_A[j] -
                            C_ij[i][j] + epsilon > 0)
 
-    # Tutaj trzeba zrobić sumę po tych wszystkich Cij żeby otrzymać wartość pojedyncza
+    # Calculate the sum for each Vertex
+    # Because EXIST_IN_A is non-zero for vertexes in path, the sum return the path cost
     for i in range(n):
         m.Equation(sum(C_ij[i][j] for j in range(n)) * EXIST_IN_A[i] - C_i[i] - epsilon < 0)
         m.Equation(sum(C_ij[i][j] for j in range(n)) * EXIST_IN_A[i] - C_i[i] + epsilon > 0)
 
-    # Łatwo jest wyznaczyć b dla wierzchołka bo wiemy ile było wierzchołków na trasie
+    # Calculate Bi for each vertex in the path
     for i in range(n):
         if i == vertex_start:
             m.Equation((m_param - NUM_OF_HOPS[vertex_end] * q) - B_i[i] - epsilon < 0)
@@ -212,16 +205,16 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
             m.Equation((reliability ** NUM_OF_HOPS[i]) * q - B_i[i] - epsilon < 0)
             m.Equation((reliability ** NUM_OF_HOPS[i]) * q - B_i[i] + epsilon > 0)
 
-    # i wyliczamy prawidłowo funkcje celu z tych dwóch rzeczy
+    # And calculate the utility function
     m.Equation(sum((B_i[i] - C_i[i]) * EXIST_IN_A[i] for i in range(n)) - U_total - epsilon < 0)
     m.Equation(sum((B_i[i] - C_i[i]) * EXIST_IN_A[i] for i in range(n)) - U_total + epsilon > 0)
 
-    # Maksymalizujemy funkcję użytkową
+    # Select the utility function for maximization
     m.Maximize(U_total)
 
-    # Ten parametr musi być równy 1 żeby liczyło dla całkowitych
+    # Make the solver use intiger numbers
     m.options.SOLVER = 1
-    #
+
     m.solve(disp=False)
 
     # Results
