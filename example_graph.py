@@ -57,6 +57,8 @@ graph.add_edge(F, G, 6)
 print('Created Graph')
 graph.print_graph()
 
+graph.reset()
+
 # Run wsn_algorythm
 print('WSN Algorythm')
 for package in range(0, 10):
@@ -86,29 +88,32 @@ for package in range(0, 10):
 
     print('')
 
+graph.reset()
+
 # Run solver solution
 print('Solver Algorythm')
 for package in range(0, 10):
     starting_vertex = A
     ending_vertex = G
 
-    out = solver_solution(graph, starting_vertex, ending_vertex)
+    vertices_to_change, answer = solver_solution(graph, starting_vertex, ending_vertex)
 
     print(f'Round {package + 1} finished with path:')
-    last_element = out[-1]
-    for path_element in out:
-        if path_element == last_element:
-            print(f'{path_element}')
-        else:
-            print(f'{path_element} -> ', end='')
 
     graph.total_load_traffic += 1
-    for vertex_name in out:
-        vertex = [vertex for vertex  in graph.vertices if vertex.name == vertex_name][0]
+    for i in range(len(graph.vertices)):
+        if(vertices_to_change[i] > 0.5):
+            vertex = graph.vertices[i]
 
-        if vertex.type == VertexType.TYPICAL or vertex.type == VertexType.START:
-            # For Start Type it will always return max energy anyway
-            vertex.current_energy = vertex.current_energy - energy_per_package
+            if vertex == ending_vertex:
+                print(f"{vertex.name}")
+            else:
+                print(f"{vertex.name} -> ", end='')
+
+            if vertex.type != VertexType.START and vertex.type != VertexType.END:
+                vertex.current_energy = vertex.current_energy - energy_per_package
+                if vertex.current_energy == vertex.min_energy:
+                    vertex.current_energy = 0.000001
             vertex.load_traffic += 1
 
     starting_vertex.reset_vertex_type()

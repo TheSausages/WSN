@@ -109,6 +109,12 @@ class Graph:
         self.total_load_traffic = 0
         self.network_info = network_info
 
+    def reset(self):
+        for vertex in self.vertices:
+            vertex.current_energy = self.network_info.e_max
+            vertex.load_traffic = 0
+            vertex.type = VertexType.TYPICAL
+
     def add_vertex(self, name: str, reliability: float) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
             raise ValueError(f'{name} already added')
