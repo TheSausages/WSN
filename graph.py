@@ -101,14 +101,23 @@ class Edge:
     def __str__(self):
         return f'{self.point_one.name} <-> {self.point_two.name}, distance: {self.distance}'
 
+    def __hash__(self):
+        return hash(self.point_one) + hash(self.point_two)
+
+    def __eq__(self, other):
+        return (
+                hasattr(other, 'point_one') and hasattr(other, 'point_two')
+                and (other.point_one == self.point_one) and (other.point_two == self.point_two)
+        )
+
 
 class Graph:
     def __init__(self, network_info: NetworkInformation, vertexes=[], edges=[]):
-        self.vertices: list[Vertex] = vertexes
-        self.edges: list[Edge] = edges
+        self.vertices: list[Vertex] = list(vertexes)
+        self.edges: list[Edge] = list(edges)
         self.total_load_traffic = 0
         self.network_info = network_info
-        self.original_edges = edges
+        self.original_edges = list(edges)
 
     # Rewrite this method so it works correctly (do something with original_edges too)
     def reset(self):
@@ -117,7 +126,7 @@ class Graph:
             vertex.load_traffic = 0
             vertex.type = VertexType.TYPICAL
 
-        self.edges = self.original_edges
+        self.edges = list(self.original_edges)
 
     def add_vertex(self, name: str, reliability: float) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
@@ -134,6 +143,11 @@ class Graph:
 
         if not self.vertices.__contains__(point_two):
             raise ValueError(f'{point_two} does not exist')
+
+        # If edge exist, skip it
+        if self.edges.__contains__(Edge(point_one, point_two, distance)) \
+                or self.edges.__contains__(Edge(point_two, point_one, distance)):
+            return
 
         self.edges.append(Edge(point_one, point_two, distance))
         self.original_edges.append(Edge(point_one, point_two, distance))
