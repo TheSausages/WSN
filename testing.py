@@ -38,4 +38,6 @@ network_info = NetworkInformation(p_other, r_max, e_max, e_min, energy_per_packa
 
 graph = generate_graph.generate_graph(10, 60, network_info, 100)
 
-graph.print_graph()
+print(generate_graph.calculate_real_graph_percentage(graph))
+
+# graph.print_graph()

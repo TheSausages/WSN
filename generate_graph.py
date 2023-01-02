@@ -87,6 +87,32 @@ def generate_graph_with_percenteges_edges(nr_of_vertices: int, percents_edges: i
 
     return graph
 
+def calculate_real_graph_percentage(graph: Graph):
+    
+    # Calculate number of edges of full graph with given size n
+    full_graph_edges = 0.0
+    n = len(graph.vertices)
+
+    # n*(n-1) for directional graph, otherwise n*(n-1)/2
+    full_graph_edges = n*(n-1)/2
+
+    # Calculate how many edges are in given graph (excluding non-existing edges)
+    real_edges = 0.0
+    r_max = graph.network_info.r_max
+
+    for edge in graph.edges:
+        # Only add the edge if the edge can be used
+        if edge.distance <= r_max:
+            real_edges+=1
+
+    # Calculate real graph edges density percentage based of those two values
+
+    print("GRAPH numbers:")
+    print(len(graph.edges))
+    print(real_edges)
+    print(full_graph_edges)
+    real_percentage = real_edges/full_graph_edges
+    return real_percentage
 
 def generate_graph(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: int) -> Graph:
     # Run the method until no error occurs and a graph is returned
@@ -94,7 +120,7 @@ def generate_graph(nr_of_vertices: int, percents_edges: int, network_info: Netwo
         try:
             generated = generate_graph_with_percenteges_edges(nr_of_vertices, percents_edges, network_info, plane_dim)
 
-            generated.print_graph()
+            # generated.print_graph()
 
             return generated
         except Exception:
