@@ -221,3 +221,29 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
     nodes_that_transmited = [EXIST_IN_A[i].value[0] for i in range(n)]
 
     return nodes_that_transmited, U_total.value[0]
+
+def get_path_in_order(graph: Graph, node_matrix):
+    vertex_start = 0
+    vertex_end = len(graph.vertices)-1
+
+    for vertex in graph.vertices:
+        if vertex.type == VertexType.START:
+            vertex_start = graph.vertices.index(vertex)
+        if vertex.type == VertexType.END:
+            vertex_end = graph.vertices.index(vertex)
+
+    cur_vertex = vertex_end
+    path_in_order = []
+    path_in_order.append(cur_vertex)
+
+    n = len(graph.vertices)
+
+    while cur_vertex != vertex_start:
+        for i in range(n):
+            if node_matrix[cur_vertex][i] > 0.1:
+                cur_vertex = i
+                path_in_order.append(cur_vertex)
+                break
+
+    path_in_order.reverse()
+    return path_in_order
