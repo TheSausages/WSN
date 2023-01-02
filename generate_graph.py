@@ -28,7 +28,7 @@ def path_still_exists(graph: Graph, max_distance: float):
         raise Exception
 
 
-def generate_random_complete_graph(nr_of_vertices: int, network_info: NetworkInformation, plane_dim: int) -> Graph:
+def generate_random_complete_graph(nr_of_vertices: int, network_info: NetworkInformation, plane_dim: float) -> Graph:
     # Create the graph
     graph = Graph(network_info)
 
@@ -38,7 +38,7 @@ def generate_random_complete_graph(nr_of_vertices: int, network_info: NetworkInf
     # Create vertices
     for vertex_number in range(nr_of_vertices):
         # We have a 50 x 50 plane, and generate points on it, this makes it easier to calculate distance
-        point_location[str(vertex_number)] = [random.randint(0, plane_dim), random.randint(0, plane_dim)]
+        point_location[str(vertex_number)] = [random.randint(0, int(plane_dim*1000))/1000.0, random.randint(0, int(plane_dim*1000))/1000.0]
         graph.add_vertex(str(vertex_number), network_info.p_other)
 
     # Create edges to get a complete graph
@@ -48,12 +48,12 @@ def generate_random_complete_graph(nr_of_vertices: int, network_info: NetworkInf
             distance = math.dist(point_location[vertex.name], point_location[vert.name])
             graph.add_edge(vertex, vert, distance)
 
-    return graph
+    return graph, point_location
 
-def generate_graph_with_percenteges_edges(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: int):
+def generate_graph_with_percenteges_edges(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: float):
     # Generate a complete graph, that has at least 1 variable path
     while True:
-        graph = generate_random_complete_graph(nr_of_vertices, network_info, plane_dim)
+        graph, point_location = generate_random_complete_graph(nr_of_vertices, network_info, plane_dim)
 
         path_exists = path_still_exists(graph, network_info.r_max)
         if path_exists:
@@ -107,14 +107,76 @@ def calculate_real_graph_percentage(graph: Graph):
 
     # Calculate real graph edges density percentage based of those two values
 
-    print("GRAPH numbers:")
-    print(len(graph.edges))
-    print(real_edges)
-    print(full_graph_edges)
     real_percentage = real_edges/full_graph_edges
     return real_percentage
 
-def generate_graph(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: int) -> Graph:
+def generate_graph_from_points(nr_of_vertices: int, network_info: NetworkInformation, point_location) -> Graph:
+    # Create the graph
+    graph = Graph(network_info)
+
+    # Create vertices
+    for vertex_number in range(nr_of_vertices):
+        graph.add_vertex(str(vertex_number), network_info.p_other)
+
+    # Create edges to get a complete graph
+    for vertex in graph.vertices:
+        # Add all necessary edges for a complete graph
+        for vert in graph.get_vertixes_besides(vertex):
+            distance = math.dist(point_location[vertex.name], point_location[vert.name])
+            graph.add_edge(vertex, vert, distance)
+
+    return graph
+
+def move_points_from_center(point_location, plane_dim, new_plane_dim):
+    new_point_location = {}
+    middle_x = plane_dim/2.0
+    middle_y = plane_dim/2.0
+    new_middle_x = new_plane_dim/2.0
+    new_middle_y = new_plane_dim/2.0
+
+    for vertex_number in range(len(point_location)):
+        # We have a 50 x 50 plane, and generate points on it, this makes it easier to calculate distance
+        new_x = (point_location[str(vertex_number)][0] - middle_x)*(new_plane_dim/plane_dim) + new_middle_x
+        new_y = (point_location[str(vertex_number)][1] - middle_y)*(new_plane_dim/plane_dim) + new_middle_y
+        new_point_location[str(vertex_number)] = [new_x, new_y]
+    
+    return new_point_location
+
+
+
+def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation) -> Graph:
+    start_plane_size = network_info.r_max/3.0
+
+    plane_change_var = start_plane_size
+    current_plane_size = 0
+
+    graph, point_location = generate_random_complete_graph(nr_of_vertices, network_info, start_plane_size)
+    print(calculate_real_graph_percentage(graph))
+    current_plane_size = start_plane_size
+
+    mult = 1
+
+    new_graph = None
+
+    for i in range(100):
+        current_plane_size = current_plane_size+plane_change_var*mult
+        new_point_location = move_points_from_center(point_location, start_plane_size, current_plane_size)
+        new_graph = generate_graph_from_points(nr_of_vertices, network_info, new_point_location)
+
+        graph_real_percentage = calculate_real_graph_percentage(new_graph)
+        print(graph_real_percentage)
+
+        if graph_real_percentage < percents_edges/100.0+0.001 and graph_real_percentage > percents_edges/100.0-0.001:
+            return new_graph
+        if graph_real_percentage*mult < (percents_edges/100.0)*mult:
+            mult = mult*-1
+            plane_change_var = plane_change_var/2.0
+
+    return new_graph
+
+    
+
+def generate_graph(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: float) -> Graph:
     # Run the method until no error occurs and a graph is returned
     while True:
         try:
