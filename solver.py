@@ -220,7 +220,9 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
     # Results
     nodes_that_transmited = [EXIST_IN_A[i].value[0] for i in range(n)]
 
-    return nodes_that_transmited, U_total.value[0]
+    nodes_matrix = [[A[i][j].value[0] for i in range(n)] for j in range(n)]
+
+    return nodes_that_transmited, U_total.value[0], nodes_matrix
 
 def get_path_in_order(graph: Graph, node_matrix):
     vertex_start = 0

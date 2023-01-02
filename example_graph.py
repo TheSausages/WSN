@@ -101,7 +101,8 @@ for package in range(0, 10):
     # Path_in_order is a path of vertices in order from found path. There is no need to do any graph operation if one wants to print found path. 
     # just print(path_in_order) or if result needs to be fancy, iterate throu it, print its elements and a "->" between them ;). 
     path_in_order = get_path_in_order(graph, node_matrix)
-
+    print("Znaleziona ścieżka:")
+    print(path_in_order)
 
 
     print(f'Round {package + 1} finished with path:')
