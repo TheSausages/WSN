@@ -128,6 +128,9 @@ class Graph:
 
         self.edges = list(self.original_edges)
 
+    def reset_edges(self):
+        self.edges = list(self.original_edges)
+
     def add_vertex(self, name: str, reliability: float) -> Vertex:
         if any(vertex.name == name for vertex in self.vertices):
             raise ValueError(f'{name} already added')

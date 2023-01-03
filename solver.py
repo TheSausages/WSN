@@ -77,7 +77,8 @@ def solver_solution(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex
         else:
             reliability_table[i] = reliability_table[i - 1] * reliability
 
-    m = GEKKO()
+    # Added remote=False, because running tests was too much for remote
+    m = GEKKO(remote=False)
 
     A = [[m.Var(lb=0, ub=1, integer=True) for i in range(n)] for j in range(n)]
 
