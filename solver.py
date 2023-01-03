@@ -248,4 +248,7 @@ def get_path_in_order(graph: Graph, node_matrix):
                 break
 
     path_in_order.reverse()
+
+    path_in_order = list(map(lambda vertex_index: graph.vertices[vertex_index], path_in_order))
+
     return path_in_order

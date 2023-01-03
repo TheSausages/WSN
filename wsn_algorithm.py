@@ -7,6 +7,9 @@ def get_number_of_vertexes_in_path(previous: dict, previous_candidate: Vertex):
     prev = previous_candidate
 
     while True:
+        if prev not in previous:
+            break
+
         prev = previous[prev]
 
         # We only increase when the previous is not the end vertex
@@ -135,7 +138,8 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
             if next_hop not in Previous.keys():
                 break
     except:
-        print(f'Could not find any path to send data')
+        # print(f'Could not find any path to send data')
+        path = []
 
     # After - Return to the original values
     graph.edges = original_edges

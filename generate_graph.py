@@ -151,7 +151,6 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
     current_plane_size = 0
 
     graph, point_location = generate_random_complete_graph(nr_of_vertices, network_info, start_plane_size)
-    print(calculate_real_graph_percentage(graph))
     current_plane_size = start_plane_size
 
     mult = 1
@@ -164,7 +163,6 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
         new_graph = generate_graph_from_points(nr_of_vertices, network_info, new_point_location)
 
         graph_real_percentage = calculate_real_graph_percentage(new_graph)
-        print(graph_real_percentage)
 
         if graph_real_percentage < percents_edges/100.0+0.001 and graph_real_percentage > percents_edges/100.0-0.001:
             return new_graph
