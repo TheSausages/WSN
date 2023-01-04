@@ -66,7 +66,5 @@ single_execution_nr_packages_folder_name = f"{base_nr_packages_folder_name}/sing
 
 
 # METHODS
-graph = generate_graph.generate_real_grah_percentage(10, graph_density_base, network_info)
+graph = generate_graph.generate_real_grah_percentage(10, 40, network_info)
 graph.print_graph()
-
-print(len(graph.edges)/((10*9)/2))

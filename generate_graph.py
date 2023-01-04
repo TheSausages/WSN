@@ -2,6 +2,7 @@ import math
 import random
 import networkx as nx
 from networkx import NetworkXNoPath
+from copy import copy, deepcopy
 
 from graph import NetworkInformation, Graph
 
@@ -142,7 +143,23 @@ def move_points_from_center(point_location, plane_dim, new_plane_dim):
     
     return new_point_location
 
+def swap_points(pointlist, a, b):
 
+    temp = pointlist[str(a)][0]
+    pointlist[str(a)][0] = pointlist[str(b)][0]
+    pointlist[str(b)][0] = temp
+
+    temp = pointlist[str(a)][1]
+    pointlist[str(a)][1] = pointlist[str(b)][1]
+    pointlist[str(b)][1] = temp
+
+    return pointlist
+
+def get_distance_squared(pointlist, a, b):
+    x = pointlist[str(a)][0] - pointlist[str(b)][0]
+    y = pointlist[str(a)][1] - pointlist[str(b)][1]
+
+    return x*x + y*y
 
 def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation) -> Graph:
     start_plane_size = network_info.r_max/3.0
@@ -156,6 +173,7 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
     mult = 1
 
     new_graph = None
+    new_point_location = None
 
     for i in range(100):
         current_plane_size = current_plane_size+plane_change_var*mult
@@ -170,6 +188,46 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
             mult = mult*-1
             plane_change_var = plane_change_var/2.0
 
+
+    # Znalezienie dwóch punktów ze ścieżką
+    #"""
+    potential_point_pairs = []
+    final_point_location = None
+    
+    for j in range(1, len(point_location)):
+        for i in range(1, len(new_point_location)):
+            copied_new_point_location = deepcopy(new_point_location)
+            
+            swap_points(copied_new_point_location, i, len(new_point_location) - 1)
+
+            new_graph_twisted = generate_graph_from_points(nr_of_vertices,network_info,copied_new_point_location)
+            if (path_still_exists(new_graph_twisted, network_info.r_max)):
+                potential_point_pairs.append([i, len(new_point_location)-1])
+        
+        if (len(potential_point_pairs) != 0):
+            # Get from found pairs points of biggest distance
+            max_len = 0.0
+            max_idx = -1
+            for k in range(len(potential_point_pairs)):
+                dist = get_distance_squared(new_point_location, potential_point_pairs[k][0], potential_point_pairs[k][1])
+                if dist > max_len:
+                    max_len = dist
+                    max_idx = k
+            # Based on those points return final point location
+            final_point_location = deepcopy(new_point_location)
+            # swap points got before
+            swap_points(final_point_location, potential_point_pairs[max_idx][0], potential_point_pairs[max_idx][1])
+            # return
+            break
+        else:
+            swap_points(new_point_location, 0, j)
+    
+        
+
+    # build graph from new point list
+    new_graph = generate_graph_from_points(nr_of_vertices, network_info, final_point_location)
+    #"""
+
     # remove fake edges from graph
     r_max = network_info.r_max
 
@@ -183,7 +241,6 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
     for edge in edges_to_remove:
         new_graph.delete_edge(edge)
 
-    print(edges_to_remove)
             
     return new_graph
 
