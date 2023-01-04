@@ -51,43 +51,6 @@ def generate_random_complete_graph(nr_of_vertices: int, network_info: NetworkInf
 
     return graph, point_location
 
-def generate_graph_with_percenteges_edges(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: float):
-    # Generate a complete graph, that has at least 1 variable path
-    while True:
-        graph, point_location = generate_random_complete_graph(nr_of_vertices, network_info, plane_dim)
-
-        path_exists = path_still_exists(graph, network_info.r_max)
-        if path_exists:
-            break
-
-    max_nr_edges = len(graph.edges) * (percents_edges / 100)
-
-    nr_of_repeats = 0
-    # Get rid of edges until percents_edges% remain
-    # This must be done in a way to always have at least 1 way from start to end
-    while True:
-        # If deleting any edge breaks the path, and the percents are not reached, return None
-        if nr_of_repeats > 100:
-            print("Exception Raised")
-            nr_of_repeats = 0
-
-            raise Exception("Could not create a graph")
-
-        # Pop an edge
-        poped_edge = graph.edges.pop(random.randint(0, len(graph.edges) - 1))
-
-        # If a solution from first to last doesn't exist anymore, add it back again and try again
-        if not path_still_exists(graph, network_info.r_max):
-            graph.edges.append(poped_edge)
-            nr_of_repeats += 1
-
-            continue
-
-        if len(graph.edges) < max_nr_edges:
-            break
-
-    return graph
-
 def calculate_real_graph_percentage(graph: Graph):
     
     # Calculate number of edges of full graph with given size n
@@ -243,17 +206,3 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
 
             
     return new_graph
-
-    
-
-def generate_graph(nr_of_vertices: int, percents_edges: int, network_info: NetworkInformation, plane_dim: float) -> Graph:
-    # Run the method until no error occurs and a graph is returned
-    while True:
-        try:
-            generated = generate_graph_with_percenteges_edges(nr_of_vertices, percents_edges, network_info, plane_dim)
-
-            # generated.print_graph()
-
-            return generated
-        except Exception:
-            continue

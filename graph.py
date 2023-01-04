@@ -195,7 +195,7 @@ class Graph:
 
         return neighbors
 
-    def delete_edge(self, vertex_i: Vertex, vertex_j: Vertex):
+    def delete_edge_using_vertexes(self, vertex_i: Vertex, vertex_j: Vertex):
         for edge in self.edges:
             if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or
                     (edge.point_two == vertex_i and edge.point_one == vertex_j)):
@@ -203,3 +203,4 @@ class Graph:
 
     def delete_edge(self, edge: Edge):
         self.edges.remove(edge)
+        self.original_edges.remove(edge)

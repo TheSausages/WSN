@@ -114,7 +114,7 @@ def run_algorythm(graph: Graph, starting_vertex: Vertex, ending_vertex: Vertex):
 
                 if (M[vertex_i] - c_ij) < 0:
                     # delete edge (vi, vj) from E
-                    graph.delete_edge(vertex_i, vertex_j)
+                    graph.delete_edge_using_vertexes(vertex_i, vertex_j)
                 else:
                     # previous(vi) = vj
                     Previous[vertex_i] = vertex_j
