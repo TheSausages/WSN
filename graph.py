@@ -200,3 +200,6 @@ class Graph:
             if ((edge.point_one == vertex_i and edge.point_two == vertex_j) or
                     (edge.point_two == vertex_i and edge.point_one == vertex_j)):
                 self.edges.remove(edge)
+
+    def delete_edge(self, edge: Edge):
+        self.edges.remove(edge)

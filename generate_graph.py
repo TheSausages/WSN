@@ -165,11 +165,26 @@ def generate_real_grah_percentage(nr_of_vertices: int, percents_edges: int, netw
         graph_real_percentage = calculate_real_graph_percentage(new_graph)
 
         if graph_real_percentage < percents_edges/100.0+0.001 and graph_real_percentage > percents_edges/100.0-0.001:
-            return new_graph
+            break
         if graph_real_percentage*mult < (percents_edges/100.0)*mult:
             mult = mult*-1
             plane_change_var = plane_change_var/2.0
 
+    # remove fake edges from graph
+    r_max = network_info.r_max
+
+    edges_to_remove = []
+
+    for edge in new_graph.edges:
+        # Only add the edge if the edge can be used
+        if edge.distance > r_max:
+            edges_to_remove.append(edge)
+
+    for edge in edges_to_remove:
+        new_graph.delete_edge(edge)
+
+    print(edges_to_remove)
+            
     return new_graph
 
     

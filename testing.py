@@ -67,7 +67,7 @@ single_execution_nr_packages_folder_name = f"{base_nr_packages_folder_name}/sing
 
 # METHODS
 
-def path_to_str(path: [Vertex]):
+def path_to_str(path):
     return " -> ".join(map(lambda vertex: vertex.name if vertex is not None else "(None)", path))
 
 def is_path_viable(graph, path):
@@ -118,7 +118,7 @@ def test_solver(graph: Graph):
 
     return solver_time_end - solver_time_start, solver_output
 
-def calculate_total_value_from_path(graph: Graph, path: [Vertex]):
+def calculate_total_value_from_path(graph: Graph, path):
     if is_path_viable(graph, path):
         values = []
 
