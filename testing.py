@@ -47,7 +47,8 @@ network_info = NetworkInformation(p_other, r_max, e_max, e_min, energy_per_packa
 
 # TESTING - VARIABLES
 
-nr_sensors = [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
+# nr_sensors = [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
+nr_sensors = [5, 7, 9]
 nr_sensors_base = 15
 
 graph_density = [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
@@ -246,13 +247,13 @@ def create_dataframe_for_test_result(data: [pd.DataFrame]):
 
 # TESTING - CREATE FOLDER STRUCTURE
 
-check_and_recreate_folder(single_execution_nr_sensors_folder_name)
-check_and_recreate_folder(single_execution_density_folder_name)
-check_and_recreate_folder(single_execution_nr_packages_folder_name)
-
-check_and_recreate_folder(single_test_nr_sensors_folder_name)
-check_and_recreate_folder(single_test_density_folder_name)
-check_and_recreate_folder(single_test_nr_packages_folder_name)
+# check_and_recreate_folder(single_execution_nr_sensors_folder_name)
+# check_and_recreate_folder(single_execution_density_folder_name)
+# check_and_recreate_folder(single_execution_nr_packages_folder_name)
+#
+# check_and_recreate_folder(single_test_nr_sensors_folder_name)
+# check_and_recreate_folder(single_test_density_folder_name)
+# check_and_recreate_folder(single_test_nr_packages_folder_name)
 
 # TESTING - NUMBER OF SENSORS
 
@@ -323,8 +324,8 @@ for sensors in nr_sensors:
     sensors_solver_df = pd.concat([sensors_solver_df, create_dataframe_for_test_result(test_solver_result)])
 
 # Save the results
-sensors_algorythm_df.to_csv(f"{base_nr_sensors_folder_name}/algorythm.csv")
-sensors_solver_df.to_csv(f"{base_nr_sensors_folder_name}/solver.csv")
+sensors_algorythm_df.to_csv(f"{base_nr_sensors_folder_name}/algorythm.csv", mode='a')
+sensors_solver_df.to_csv(f"{base_nr_sensors_folder_name}/solver.csv", mode='a')
 #
 # # TESTING - DENSITY OF CONNECTIONS
 #
