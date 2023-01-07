@@ -219,13 +219,13 @@ def save_single_test_results(results: [pd.DataFrame], file_name: str):
     df.to_csv(file_name)
 
 
-def create_dataframe_for_single_test_result(data: [Vertex], sensors, density, packages):
-    how_many_found = len(list(filter(lambda res: res['path_found'].bool() == True, package_algorythm_result)))
+def create_dataframe_for_single_test_result(data: [pd.DataFrame], sensors, density, packages):
+    how_many_found = len(list(filter(lambda res: res['path_found'].bool() == True, data)))
     return pd.DataFrame({
         'nr_path_found': how_many_found,
         'nr_path_all': len(data),
-        'found_percent': round(how_many_found  / len(data), 2),
-        'path_cost_mean': pd.Series(map(lambda res: res['path_cost'], data)).mean(),
+        'found_percent': round(how_many_found  / len(data), 4),
+        'path_cost_mean': pd.Series(map(lambda res: res['path_cost'], list(filter(lambda res: res['path_cost'].item() > 0, data)))).mean(),
         'time_mean': pd.Series(map(lambda res: res['time'], data)).mean(),
         'sensors': sensors,
         'density': density,
@@ -233,9 +233,10 @@ def create_dataframe_for_single_test_result(data: [Vertex], sensors, density, pa
     }, index=[0])
 
 def create_dataframe_for_test_result(data: [pd.DataFrame]):
+    # print(list(filter(lambda res: res['path_cost_mean'].item() > 0, data)))
     return pd.DataFrame({
         'found_percent_mean': pd.Series(map(lambda res: res['found_percent'], data)).mean(),
-        'path_cost_mean': pd.Series(map(lambda res: res['path_cost_mean'], data)).mean(),
+        'path_cost_mean': pd.Series(map(lambda res: res['path_cost_mean'], list(filter(lambda res: res['path_cost_mean'].item() > 0, data)))).mean(),
         'time_mean': pd.Series(map(lambda res: res['time_mean'], data)).mean(),
         'sensors': data[0]['sensors'],
         'density': data[0]['density'],
@@ -274,6 +275,8 @@ for sensors in nr_sensors:
         package_solver_result = []
 
         for package in range(nr_packages_base):
+            print(f"{sensors} - {test_nr} - {package} started")
+
             # Test Algorythm Solution
             algorythm_time, algorithm_output = test_algorythm(graph)
 
@@ -322,144 +325,144 @@ for sensors in nr_sensors:
 # Save the results
 sensors_algorythm_df.to_csv(f"{base_nr_sensors_folder_name}/algorythm.csv")
 sensors_solver_df.to_csv(f"{base_nr_sensors_folder_name}/solver.csv")
-
-# TESTING - DENSITY OF CONNECTIONS
-
-# Create dataframes for results
-density_algorythm_df = pd.DataFrame(
-    columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
-density_solver_df = pd.DataFrame(
-    columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
-
-for density in graph_density:
-    test_algorythm_result = []
-    test_solver_result = []
-
-    # Run each test 10 times
-    for test_nr in range(nr_tests):
-        # Create Graph
-        graph = generate_graph.generate_real_grah_percentage(nr_packages_base, density, network_info)
-
-        package_algorythm_result = []
-        package_solver_result = []
-
-        for package in range(nr_packages_base):
-            # Test Algorythm Solution
-            algorythm_time, algorithm_output = test_algorythm(graph)
-
-            # Test Solver Solution
-            solver_time, solver_output = test_solver(graph)
-
-            # Save single test solutions
-            save_single_test_data_to_file(graph, algorythm_time, algorithm_output, solver_time, solver_output,
-                                          f"{single_execution_density_folder_name}/{density}-{test_nr}-{package}.txt")
-
-            # Save the results for both algorythm and solver
-            package_algorythm_result.append(
-                pd.DataFrame({'path_found': is_path_viable(graph, algorithm_output),
-                              'path_cost': calculate_total_value_from_path(graph, algorithm_output),
-                              'time': algorythm_time, 'package': package}, index=[0]))
-            package_solver_result.append(
-                pd.DataFrame({'path_found': is_path_viable(graph, solver_output),
-                              'path_cost': calculate_total_value_from_path(graph, solver_output),
-                              'time': solver_time, 'package': package}, index=[0]))
-
-            # For every vertex in both results (if there are duplicates, they are done 2 times)
-            for vertex in algorithm_output + solver_output:
-                if vertex is not None:
-                    if vertex.type != VertexType.START and vertex.type != VertexType.END:
-                        vertex.current_energy = vertex.current_energy - energy_per_package
-                        if vertex.current_energy == vertex.min_energy:
-                            vertex.current_energy = 0.000001
-                    vertex.load_traffic += 1
-
-            print(f"{density} - {test_nr} - {package} finished")
-
-        # Save the single test result for both solutions
-        save_single_test_results(package_algorythm_result,
-                                 f'{single_test_density_folder_name}/{density}_{test_nr}_algorythm.csv')
-        save_single_test_results(package_solver_result,
-                                 f'{single_test_density_folder_name}/{density}_{test_nr}_solver.csv')
-
-        # Save the results to the list
-        test_algorythm_result.append(create_dataframe_for_single_test_result(package_algorythm_result, nr_sensors_base, density, nr_packages_base))
-        test_solver_result.append(create_dataframe_for_single_test_result(package_solver_result, nr_sensors_base, density, nr_packages_base))
-
-    # Save the mean results for all 10 test
-    density_algorythm_df = pd.concat([density_algorythm_df, create_dataframe_for_test_result(test_algorythm_result)])
-    density_solver_df = pd.concat([density_solver_df, create_dataframe_for_test_result(test_solver_result)])
-
-# Save the results
-density_algorythm_df.to_csv(f"{base_density_folder_name}/algorythm.csv")
-density_solver_df.to_csv(f"{base_density_folder_name}/solver.csv")
-
-
-# TESTING - NR OF PACKAGES SEND
-
-# Create dataframes for results
-package_algorythm_df = pd.DataFrame(
-    columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
-package_solver_df = pd.DataFrame(
-    columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
-
-for n_package in nr_packages:
-    test_algorythm_result = []
-    test_solver_result = []
-
-    # Run each test 10 times
-    for test_nr in range(nr_tests):
-        # Create Graph
-        graph = generate_graph.generate_real_grah_percentage(nr_packages_base, graph_density_base, network_info)
-
-        package_algorythm_result = []
-        package_solver_result = []
-
-        for package in range(n_package):
-            # Test Algorythm Solution
-            algorythm_time, algorithm_output = test_algorythm(graph)
-
-            # Test Solver Solution
-            solver_time, solver_output = test_solver(graph)
-
-            # Save single test solutions
-            save_single_test_data_to_file(graph, algorythm_time, algorithm_output, solver_time, solver_output,
-                                          f"{single_execution_nr_packages_folder_name}/{n_package}-{test_nr}-{package}.txt")
-
-            # Save the results for both algorythm and solver
-            package_algorythm_result.append(
-                pd.DataFrame({'path_found': is_path_viable(graph, algorithm_output),
-                              'path_cost': calculate_total_value_from_path(graph, algorithm_output),
-                              'time': algorythm_time, 'package': package}, index=[0]))
-            package_solver_result.append(
-                pd.DataFrame({'path_found': is_path_viable(graph, solver_output),
-                              'path_cost': calculate_total_value_from_path(graph, solver_output),
-                              'time': solver_time, 'package': package}, index=[0]))
-
-            # For every vertex in both results (if there are duplicates, they are done 2 times)
-            for vertex in algorithm_output + solver_output:
-                if vertex is not None:
-                    if vertex.type != VertexType.START and vertex.type != VertexType.END:
-                        vertex.current_energy = vertex.current_energy - energy_per_package
-                        if vertex.current_energy == vertex.min_energy:
-                            vertex.current_energy = 0.000001
-                    vertex.load_traffic += 1
-
-            print(f"{n_package} - {test_nr} - {package} finished")
-
-        # Save the single test result for both solutions
-        save_single_test_results(package_algorythm_result,
-                                 f'{single_test_nr_packages_folder_name}/{n_package}_{test_nr}_algorythm.csv')
-        save_single_test_results(package_solver_result,
-                                 f'{single_test_nr_packages_folder_name}/{n_package}_{test_nr}_solver.csv')
-
-        # Save the results to the list
-        test_algorythm_result.append(create_dataframe_for_single_test_result(package_algorythm_result, nr_sensors_base, graph_density_base, n_package))
-        test_solver_result.append(create_dataframe_for_single_test_result(package_solver_result, nr_sensors_base, graph_density_base, n_package))
-
-    # Save the mean results for all 10 test
-    package_algorythm_df = pd.concat([package_algorythm_df, create_dataframe_for_test_result(test_algorythm_result)])
-    package_solver_df = pd.concat([package_solver_df, create_dataframe_for_test_result(test_solver_result)])
-
-# Save the results
-package_algorythm_df.to_csv(f"{base_nr_packages_folder_name}/algorythm.csv")
-package_solver_df.to_csv(f"{base_nr_packages_folder_name}/solver.csv")
+#
+# # TESTING - DENSITY OF CONNECTIONS
+#
+# # Create dataframes for results
+# density_algorythm_df = pd.DataFrame(
+#     columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
+# density_solver_df = pd.DataFrame(
+#     columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
+#
+# for density in graph_density:
+#     test_algorythm_result = []
+#     test_solver_result = []
+#
+#     # Run each test 10 times
+#     for test_nr in range(nr_tests):
+#         # Create Graph
+#         graph = generate_graph.generate_real_grah_percentage(nr_packages_base, density, network_info)
+#
+#         package_algorythm_result = []
+#         package_solver_result = []
+#
+#         for package in range(nr_packages_base):
+#             # Test Algorythm Solution
+#             algorythm_time, algorithm_output = test_algorythm(graph)
+#
+#             # Test Solver Solution
+#             solver_time, solver_output = test_solver(graph)
+#
+#             # Save single test solutions
+#             save_single_test_data_to_file(graph, algorythm_time, algorithm_output, solver_time, solver_output,
+#                                           f"{single_execution_density_folder_name}/{density}-{test_nr}-{package}.txt")
+#
+#             # Save the results for both algorythm and solver
+#             package_algorythm_result.append(
+#                 pd.DataFrame({'path_found': is_path_viable(graph, algorithm_output),
+#                               'path_cost': calculate_total_value_from_path(graph, algorithm_output),
+#                               'time': algorythm_time, 'package': package}, index=[0]))
+#             package_solver_result.append(
+#                 pd.DataFrame({'path_found': is_path_viable(graph, solver_output),
+#                               'path_cost': calculate_total_value_from_path(graph, solver_output),
+#                               'time': solver_time, 'package': package}, index=[0]))
+#
+#             # For every vertex in both results (if there are duplicates, they are done 2 times)
+#             for vertex in algorithm_output + solver_output:
+#                 if vertex is not None:
+#                     if vertex.type != VertexType.START and vertex.type != VertexType.END:
+#                         vertex.current_energy = vertex.current_energy - energy_per_package
+#                         if vertex.current_energy == vertex.min_energy:
+#                             vertex.current_energy = 0.000001
+#                     vertex.load_traffic += 1
+#
+#             print(f"{density} - {test_nr} - {package} finished")
+#
+#         # Save the single test result for both solutions
+#         save_single_test_results(package_algorythm_result,
+#                                  f'{single_test_density_folder_name}/{density}_{test_nr}_algorythm.csv')
+#         save_single_test_results(package_solver_result,
+#                                  f'{single_test_density_folder_name}/{density}_{test_nr}_solver.csv')
+#
+#         # Save the results to the list
+#         test_algorythm_result.append(create_dataframe_for_single_test_result(package_algorythm_result, nr_sensors_base, density, nr_packages_base))
+#         test_solver_result.append(create_dataframe_for_single_test_result(package_solver_result, nr_sensors_base, density, nr_packages_base))
+#
+#     # Save the mean results for all 10 test
+#     density_algorythm_df = pd.concat([density_algorythm_df, create_dataframe_for_test_result(test_algorythm_result)])
+#     density_solver_df = pd.concat([density_solver_df, create_dataframe_for_test_result(test_solver_result)])
+#
+# # Save the results
+# density_algorythm_df.to_csv(f"{base_density_folder_name}/algorythm.csv")
+# density_solver_df.to_csv(f"{base_density_folder_name}/solver.csv")
+#
+#
+# # TESTING - NR OF PACKAGES SEND
+#
+# # Create dataframes for results
+# package_algorythm_df = pd.DataFrame(
+#     columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
+# package_solver_df = pd.DataFrame(
+#     columns=['found_percent_mean', 'path_cost_mean', 'time_mean', 'sensors', 'density', 'packages'])
+#
+# for n_package in nr_packages:
+#     test_algorythm_result = []
+#     test_solver_result = []
+#
+#     # Run each test 10 times
+#     for test_nr in range(nr_tests):
+#         # Create Graph
+#         graph = generate_graph.generate_real_grah_percentage(nr_packages_base, graph_density_base, network_info)
+#
+#         package_algorythm_result = []
+#         package_solver_result = []
+#
+#         for package in range(n_package):
+#             # Test Algorythm Solution
+#             algorythm_time, algorithm_output = test_algorythm(graph)
+#
+#             # Test Solver Solution
+#             solver_time, solver_output = test_solver(graph)
+#
+#             # Save single test solutions
+#             save_single_test_data_to_file(graph, algorythm_time, algorithm_output, solver_time, solver_output,
+#                                           f"{single_execution_nr_packages_folder_name}/{n_package}-{test_nr}-{package}.txt")
+#
+#             # Save the results for both algorythm and solver
+#             package_algorythm_result.append(
+#                 pd.DataFrame({'path_found': is_path_viable(graph, algorithm_output),
+#                               'path_cost': calculate_total_value_from_path(graph, algorithm_output),
+#                               'time': algorythm_time, 'package': package}, index=[0]))
+#             package_solver_result.append(
+#                 pd.DataFrame({'path_found': is_path_viable(graph, solver_output),
+#                               'path_cost': calculate_total_value_from_path(graph, solver_output),
+#                               'time': solver_time, 'package': package}, index=[0]))
+#
+#             # For every vertex in both results (if there are duplicates, they are done 2 times)
+#             for vertex in algorithm_output + solver_output:
+#                 if vertex is not None:
+#                     if vertex.type != VertexType.START and vertex.type != VertexType.END:
+#                         vertex.current_energy = vertex.current_energy - energy_per_package
+#                         if vertex.current_energy == vertex.min_energy:
+#                             vertex.current_energy = 0.000001
+#                     vertex.load_traffic += 1
+#
+#             print(f"{n_package} - {test_nr} - {package} finished")
+#
+#         # Save the single test result for both solutions
+#         save_single_test_results(package_algorythm_result,
+#                                  f'{single_test_nr_packages_folder_name}/{n_package}_{test_nr}_algorythm.csv')
+#         save_single_test_results(package_solver_result,
+#                                  f'{single_test_nr_packages_folder_name}/{n_package}_{test_nr}_solver.csv')
+#
+#         # Save the results to the list
+#         test_algorythm_result.append(create_dataframe_for_single_test_result(package_algorythm_result, nr_sensors_base, graph_density_base, n_package))
+#         test_solver_result.append(create_dataframe_for_single_test_result(package_solver_result, nr_sensors_base, graph_density_base, n_package))
+#
+#     # Save the mean results for all 10 test
+#     package_algorythm_df = pd.concat([package_algorythm_df, create_dataframe_for_test_result(test_algorythm_result)])
+#     package_solver_df = pd.concat([package_solver_df, create_dataframe_for_test_result(test_solver_result)])
+#
+# # Save the results
+# package_algorythm_df.to_csv(f"{base_nr_packages_folder_name}/algorythm.csv")
+# package_solver_df.to_csv(f"{base_nr_packages_folder_name}/solver.csv")
